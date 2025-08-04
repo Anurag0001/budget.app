@@ -1,7 +1,42 @@
 import streamlit as st
 import datetime
-import json
 
+# --- BudgetApp Class ---
+class BudgetApp:
+    def __init__(self):
+        self.goals = {}
+        self.expenses = []
+        self.reminders = []
+
+    def set_goal(self, name, amount, deadline):
+        self.goals[name] = {
+            'amount': amount,
+            'deadline': deadline,
+            'saved': 0
+        }
+
+    def add_expense(self, category, amount, date=None):
+        if not date:
+            date = datetime.date.today().isoformat()
+        self.expenses.append({'category': category, 'amount': amount, 'date': date})
+
+    def add_savings(self, goal_name, amount):
+        if goal_name in self.goals:
+            self.goals[goal_name]['saved'] += amount
+        else:
+            st.warning("Goal not found.")
+
+    def set_reminder(self, message, date):
+        self.reminders.append({'message': message, 'date': date})
+
+    def analyze_spending(self):
+        summary = {}
+        for exp in self.expenses:
+            summary[exp['category']] = summary.get(exp['category'], 0) + exp['amount']
+        return summary
+
+
+# Instantiate the app (after class definition)
 app = BudgetApp()
 
 st.title("💰 Budget Tracker")
@@ -15,7 +50,7 @@ with st.form("goal_form"):
     submit_goal = st.form_submit_button("Set Goal")
 
     if submit_goal:
-        msg = app.set_goal(name, amount, str(deadline))
+        app.set_goal(name, amount, str(deadline))
         st.success(f"Goal '{name}' set for ₹{amount:.2f} by {deadline}")
 
 # --- Add Expense Section ---
@@ -33,7 +68,8 @@ with st.form("expense_form"):
 # --- Add Savings ---
 st.header("📥 Contribute to Savings")
 with st.form("savings_form"):
-    goal_choice = st.selectbox("Select Goal", options=list(app.goals.keys()) or ["(none)"])
+    goal_options = list(app.goals.keys())
+    goal_choice = st.selectbox("Select Goal", options=goal_options if goal_options else ["(none)"])
     savings_amt = st.number_input("Amount to Save", min_value=0.0, step=50.0)
     submit_savings = st.form_submit_button("Add Savings")
 
@@ -63,10 +99,8 @@ else:
 # --- Show Spending Summary ---
 st.header("📊 Spending Analysis")
 if app.expenses:
-    category_totals = {}
-    for exp in app.expenses:
-        category_totals[exp["category"]] = category_totals.get(exp["category"], 0) + exp["amount"]
-    for cat, amt in category_totals.items():
+    summary = app.analyze_spending()
+    for cat, amt in summary.items():
         st.write(f"- **{cat}**: ₹{amt:.2f}")
 else:
     st.info("No expenses recorded.")
@@ -78,58 +112,3 @@ if app.reminders:
         st.write(f"- {reminder['date']}: {reminder['message']}")
 else:
     st.info("No reminders set.")
-
-
-
-class BudgetApp:
-    def __init__(self):
-        self.goals = {}
-        self.expenses = []
-        self.reminders = []
-
-    def set_goal(self, name, amount, deadline):
-        self.goals[name] = {
-            'amount': amount,
-            'deadline': deadline,
-            'saved': 0
-        }
-        print(f"Goal '{name}' set for ${amount} by {deadline}.")
-
-    def add_expense(self, category, amount, date=None):
-        if not date:
-            date = datetime.date.today().isoformat()
-        self.expenses.append({'category': category, 'amount': amount, 'date': date})
-        print(f"Added expense: {category} - ${amount} on {date}")
-
-    def add_savings(self, goal_name, amount):
-        if goal_name in self.goals:
-            self.goals[goal_name]['saved'] += amount
-            print(f"Added ${amount} to '{goal_name}'. Total saved: ${self.goals[goal_name]['saved']}")
-        else:
-            print("Goal not found.")
-
-    def set_reminder(self, message, date):
-        self.reminders.append({'message': message, 'date': date})
-        print(f"Reminder set for {date}: {message}")
-
-    def analyze_spending(self):
-        summary = {}
-        for exp in self.expenses:
-            summary[exp['category']] = summary.get(exp['category'], 0) + exp['amount']
-        print("Spending Analysis:")
-        for cat, amt in summary.items():
-            print(f"{cat}: ${amt}")
-
-    def show_goals(self):
-        print("Goals:")
-        for name, data in self.goals.items():
-            print(f"{name} - Target: ${data['amount']}, Deadline: {data['deadline']}, Saved: ${data['saved']}")
-
-    def show_reminders(self):
-        print("Reminders:")
-        for reminder in self.reminders:
-            print(f"{reminder['date']}: {reminder['message']}")
-
-
-if __name__ == "__main__":
-    main()
