@@ -1,5 +1,4 @@
 import streamlit as st
-from budget_logic import BudgetApp
 import datetime
 import json
 
@@ -131,38 +130,6 @@ class BudgetApp:
         for reminder in self.reminders:
             print(f"{reminder['date']}: {reminder['message']}")
 
-def main():
-    app = BudgetApp()
-    while True:
-        cmd = input("Enter command: ").strip()
-        if cmd == 'set_goal':
-            name = input("Goal name: ")
-            amount = float(input("Goal amount: "))
-            deadline = input("Deadline (YYYY-MM-DD): ")
-            app.set_goal(name, amount, deadline)
-        elif cmd == 'add_expense':
-            category = input("Expense category: ")
-            amount = float(input("Amount: "))
-            app.add_expense(category, amount)
-        elif cmd == 'add_savings':
-            goal_name = input("Goal name: ")
-            amount = float(input("Amount to add: "))
-            app.add_savings(goal_name, amount)
-        elif cmd == 'set_reminder':
-            message = input("Reminder message: ")
-            date = input("Reminder date (YYYY-MM-DD): ")
-            app.set_reminder(message, date)
-        elif cmd == 'analyze_spending':
-            app.analyze_spending()
-        elif cmd == 'show_goals':
-            app.show_goals()
-        elif cmd == 'show_reminders':
-            app.show_reminders()
-        elif cmd == 'quit':
-            print("Goodbye!")
-            break
-        else:
-            print("Unknown command.")
 
 if __name__ == "__main__":
     main()
