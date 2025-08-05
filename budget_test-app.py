@@ -95,10 +95,28 @@ class BudgetManager:
 
 
 
-if app.goals:
-    selected_goal = st.selectbox("Choose a Goal to Track", list(app.goals.keys()))
-    st.write(f"📊 Tracking adjusted savings for goal: **{selected_goal}**")
-    savings_df = app.get_savings_curve(selected_goal)
+
+# --- Streamlit App ---
+def run_budget_app():
+    st.title("💰 Dynamic Budget & Savings Planner")
+
+    app = BudgetManager()
+
+    # Goal Setup Section
+    st.sidebar.header("🎯 Add or Update Goal")
+    goal_name = st.sidebar.text_input("Goal Name")
+    goal_amount = st.sidebar.number_input("Target Amount", min_value=0)
+    deadline = st.sidebar.date_input("Deadline")
+
+    if st.sidebar.button("Set Goal"):
+        app.add_goal(goal_name, goal_amount, deadline)
+        st.sidebar.success(f"Goal '{goal_name}' set!")
+
+    # Show Goal Tracker
+    if app.goals:
+        selected_goal = st.selectbox("Choose a Goal to Track", list(app.goals.keys()))
+        st.write(f"📊 Tracking adjusted savings for goal: **{selected_goal}**")
+        savings_df = app.get_savings_curve(selected_goal)
 
     if not savings_df.empty:
         st.line_chart(savings_df.set_index("Date")[["Required_Cumulative_Saving", "Actual_Saving"]])
@@ -112,3 +130,23 @@ if app.goals:
             st.info(f"Remaining amount needed: ₹{goal_amount - final_saving:.2f}")
     else:
         st.warning("No savings curve available for the selected goal.")
+
+    # Expense Input
+    st.sidebar.header("📉 Add Expense")
+    expense_cat = st.sidebar.text_input("Category")
+    expense_amt = st.sidebar.number_input("Amount", min_value=0)
+    if st.sidebar.button("Add Expense"):
+        app.add_expense(expense_cat, expense_amt)
+        st.sidebar.success(f"Expense '{expense_cat}' added!")
+
+    # Show Spending Summary
+    st.subheader("📁 Spending Summary")
+    summary = app.spending_summary()
+    if summary:
+        st.write(summary)
+    else:
+        st.info("No expenses recorded yet.")
+
+run_budget_app()
+
+
