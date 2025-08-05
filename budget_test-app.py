@@ -2,38 +2,30 @@ import streamlit as st
 import pandas as pd
 import datetime
 
-import streamlit as st
-import pandas as pd
-import datetime
-from typing import List, Dict, Any
-
 # --- Budget Manager Class ---
 class BudgetManager:
     def __init__(self):
-        self.goals: Dict[str, Dict[str, Any]] = {}
-        self.expenses: List[Dict[str, Any]] = []
-        self.reminders: List[Dict[str, Any]] = []
+        self.goals = {}
+        self.expenses = []
+        self.reminders = []
 
-    # ------------------ Goal Operations ------------------
-
-    def add_goal(self, name: str, amount: float, deadline: datetime.date) -> None:
-        """Add a new savings goal."""
+    # Goal operations
+    def add_goal(self, name, amount, deadline):
         self.goals[name] = {
             'amount': amount,
             'deadline': deadline,
-            'saved': 0.0
+            'saved': 0
         }
 
-    def update_savings(self, goal_name: str, amount: float) -> None:
-        """Add funds to a savings goal."""
+    def update_savings(self, goal_name, amount):
         if goal_name in self.goals:
             self.goals[goal_name]['saved'] += amount
         else:
-            st.warning("⚠️ Goal not found.")
+            st.warning("Goal not found.")
 
-    def get_savings_curve(self, goal_name: str) -> pd.DataFrame:
-        """Generate savings trajectory considering expenses."""
+    def get_savings_curve(self, goal_name):
         if goal_name not in self.goals:
+            st.warning("Goal not found.")
             return pd.DataFrame()
 
         goal = self.goals[goal_name]
@@ -42,58 +34,34 @@ class BudgetManager:
         total_days = (deadline - today).days
 
         if total_days <= 0:
+            st.warning("Deadline must be in the future.")
             return pd.DataFrame()
 
         dates = pd.date_range(start=today, end=deadline)
-        daily_required = goal['amount'] / len(dates)
+        daily_saving = goal['amount'] / len(dates)
 
-        # Build expense DataFrame
-        df_exp = pd.DataFrame(self.expenses)
-        if not df_exp.empty:
-            df_exp['date'] = pd.to_datetime(df_exp['date']).dt.date
-            expense_group = df_exp.groupby('date')['amount'].sum().reindex(dates.date, fill_value=0)
-            cumulative_expense = expense_group.cumsum()
-        else:
-            cumulative_expense = pd.Series([0.0] * len(dates), index=dates.date)
-
-        # Calculate adjusted actual savings
-        adjusted_saving = goal['saved'] - cumulative_expense
-
-        return pd.DataFrame({
+        curve = pd.DataFrame({
             "Date": dates,
-            "Required_Cumulative_Saving": [daily_required * (i + 1) for i in range(len(dates))],
-            "Actual_Saving": adjusted_saving.values
+            "Required_Cumulative_Saving": [daily_saving * (i + 1) for i in range(len(dates))],
+            "Actual_Saving": [goal['saved']] * len(dates)
         })
 
-    # ------------------ Expense Operations ------------------
+        return curve
 
-    def add_expense(self, category: str, amount: float, date: str = None) -> None:
-        """Log an expense under a category."""
+    # Expense operations
+    def add_expense(self, category, amount, date=None):
         date = date or datetime.date.today().isoformat()
-        self.expenses.append({
-            'category': category,
-            'amount': amount,
-            'date': date
-        })
+        self.expenses.append({'category': category, 'amount': amount, 'date': date})
 
-    def spending_summary(self) -> Dict[str, float]:
-        """Summarize spending by category."""
+    def spending_summary(self):
         df = pd.DataFrame(self.expenses)
         if df.empty:
             return {}
         return df.groupby('category')['amount'].sum().to_dict()
 
-    # ------------------ Reminder Operations ------------------
-
-    def set_reminder(self, message: str, date: datetime.date) -> None:
-        """Store a reminder message for a future date."""
-        self.reminders.append({
-            'message': message,
-            'date': date
-        })
-
-
-
+    # Reminder operations
+    def set_reminder(self, message, date):
+        self.reminders.append({'message': message, 'date': date})
 
 
 # --- Streamlit App ---
@@ -115,13 +83,6 @@ def run_budget_app():
     # Show Goal Tracker
     if app.goals:
         selected_goal = st.selectbox("Choose a Goal to Track", list(app.goals.keys()))
-        st.write(f"📊 Tracking adjusted savings for goal: **{selected_goal}**")
-        savings_df = app.get_savings_curve(selected_goal)
-
-    
-    # Show Goal Tracker
-    if app.goals:
-        selected_goal = st.selectbox("Choose a Goal to Track", list(app.goals.keys()))
         new_amount = st.number_input("Update Goal Amount", value=app.goals[selected_goal]['amount'])
 
         if new_amount != app.goals[selected_goal]['amount']:
@@ -131,7 +92,6 @@ def run_budget_app():
         savings_df = app.get_savings_curve(selected_goal)
         if not savings_df.empty:
             st.line_chart(savings_df.set_index("Date")[["Required_Cumulative_Saving", "Actual_Saving"]])
-
 
     # Expense Input
     st.sidebar.header("📉 Add Expense")
@@ -150,5 +110,3 @@ def run_budget_app():
         st.info("No expenses recorded yet.")
 
 run_budget_app()
-
-
