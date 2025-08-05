@@ -118,18 +118,20 @@ def run_budget_app():
         st.write(f"📊 Tracking adjusted savings for goal: **{selected_goal}**")
         savings_df = app.get_savings_curve(selected_goal)
 
-    if not savings_df.empty:
-        st.line_chart(savings_df.set_index("Date")[["Required_Cumulative_Saving", "Actual_Saving"]])
-        final_saving = savings_df["Actual_Saving"].iloc[-1]
-        goal_amount = app.goals[selected_goal]["amount"]
-        if final_saving >= goal_amount:
-            st.success("🎉 You're on track to meet your goal despite expenses!")
-        elif final_saving < 0:
-            st.error("⚠️ Expenses have exceeded savings. Review your spending strategy.")
-        else:
-            st.info(f"Remaining amount needed: ₹{goal_amount - final_saving:.2f}")
-    else:
-        st.warning("No savings curve available for the selected goal.")
+    
+    # Show Goal Tracker
+    if app.goals:
+        selected_goal = st.selectbox("Choose a Goal to Track", list(app.goals.keys()))
+        new_amount = st.number_input("Update Goal Amount", value=app.goals[selected_goal]['amount'])
+
+        if new_amount != app.goals[selected_goal]['amount']:
+            app.goals[selected_goal]['amount'] = new_amount
+
+        st.write(f"📊 Tracking savings for goal: **{selected_goal}**")
+        savings_df = app.get_savings_curve(selected_goal)
+        if not savings_df.empty:
+            st.line_chart(savings_df.set_index("Date")[["Required_Cumulative_Saving", "Actual_Saving"]])
+
 
     # Expense Input
     st.sidebar.header("📉 Add Expense")
