@@ -2,66 +2,32 @@ import streamlit as st
 import pandas as pd
 import datetime
 
-# --- Budget Manager Class ---
-class BudgetManager:
-    def __init__(self):
-        self.goals = {}
-        self.expenses = []
-        self.reminders = []
+def calculate_required_daily_saving(self, goal_name, earnings, start_date):
+    if goal_name not in self.goals:
+        return "Goal not found."
 
-    # Goal operations
-    def add_goal(self, name, amount, deadline):
-        self.goals[name] = {
-            'amount': amount,
-            'deadline': deadline,
-            'saved': 0
-        }
+    goal = self.goals[goal_name]
+    end_date = goal['deadline']
+    today = datetime.date.today()
+    start_date = max(start_date, today)
 
-    def update_savings(self, goal_name, amount):
-        if goal_name in self.goals:
-            self.goals[goal_name]['saved'] += amount
-        else:
-            st.warning("Goal not found.")
+    # Filter expenses within the timeline
+    df_expenses = pd.DataFrame(self.expenses)
+    df_expenses['date'] = pd.to_datetime(df_expenses['date']).dt.date
+    expenses_in_range = df_expenses[
+        (df_expenses['date'] >= start_date) & (df_expenses['date'] <= end_date)
+    ]['amount'].sum()
 
-    def get_savings_curve(self, goal_name):
-        if goal_name not in self.goals:
-            st.warning("Goal not found.")
-            return pd.DataFrame()
+    # Net savings potential
+    net_available = earnings - expenses_in_range + goal['saved']
+    remaining_needed = max(goal['amount'] - net_available, 0)
 
-        goal = self.goals[goal_name]
-        today = datetime.date.today()
-        deadline = goal['deadline']
-        total_days = (deadline - today).days
+    total_days = (end_date - start_date).days
+    if total_days <= 0:
+        return "Invalid timeline."
 
-        if total_days <= 0:
-            st.warning("Deadline must be in the future.")
-            return pd.DataFrame()
-
-        dates = pd.date_range(start=today, end=deadline)
-        daily_saving = goal['amount'] / len(dates)
-
-        curve = pd.DataFrame({
-            "Date": dates,
-            "Required_Cumulative_Saving": [daily_saving * (i + 1) for i in range(len(dates))],
-            "Actual_Saving": [goal['saved']] * len(dates)
-        })
-
-        return curve
-
-    # Expense operations
-    def add_expense(self, category, amount, date=None):
-        date = date or datetime.date.today().isoformat()
-        self.expenses.append({'category': category, 'amount': amount, 'date': date})
-
-    def spending_summary(self):
-        df = pd.DataFrame(self.expenses)
-        if df.empty:
-            return {}
-        return df.groupby('category')['amount'].sum().to_dict()
-
-    # Reminder operations
-    def set_reminder(self, message, date):
-        self.reminders.append({'message': message, 'date': date})
+    daily_required = remaining_needed / total_days
+    return round(daily_required, 2)
 
 
 # --- Streamlit App ---
